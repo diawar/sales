@@ -1,0 +1,3 @@
+const fs=require('node:fs');
+let p='prototype/dist/profile-ui.js';let s=fs.readFileSync(p,'utf8');s=s.replace("r.profile_tag=(r.tags||[]).join(' | ');", "r.profile_tag=(r.tags||[]).join(' | ');r.websites_text=(r.websites||[]).join(' | ');r.socials_text=(r.socials||[]).map(v=>v.service+'='+v.value).join(' | ');");fs.writeFileSync(p,s);
+p='prototype/dist/app.js';s=fs.readFileSync(p,'utf8');s=s.replace("'source','phone'];const list=filtered()", "'source','phone','identifier','city','industry','organization_type','websites_text','socials_text','profile_tag'];const list=filtered()");s=s.replace("'Источник','Телефоны'].map(quote)", "'Источник','Телефоны','БИН','Город','Отрасль','Тип организации','Сайт','Соцсети','Теги'].map(quote)");fs.writeFileSync(p,s);

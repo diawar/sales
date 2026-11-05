@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+*.pyc
+data/
+.env
+node_modules/
+outputs/
+docs/screenshots/
+*.sqlite3
+*.sqlite3-*
+*.log
+.env.*
+!.env.example
+# Unrelated catalogue audit and generated private reports
+/audit.py
+/build.mjs
+/build_log.txt
+/candidates.json
+/classification_log.txt
+/classify.py
+/dealer_unique.json
+/report_data.json
+/Отсутствующие категории.txt
