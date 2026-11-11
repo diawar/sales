@@ -2,6 +2,7 @@
 import re
 import csv
 import io
+from html import escape
 from html.parser import HTMLParser
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
@@ -59,6 +60,47 @@ def parse_buyers(text):
             'email':email,'phone':row['Телефон'].strip(),'city':row.get('Город проживания') or row.get('Город') or None,
             'registered_at':row.get('Дата регистрации',''),'groups':groups,'category':category,'reasons':reasons,
             'issues':issues,'marketing_consent':'Неизвестно'})
+    return records
+
+
+def prepare_user_csv(text):
+    """Read the authorised SELECT export, without credentials or order amounts."""
+    reader=csv.DictReader(io.StringIO(text))
+    mapping={'ID':'CUSTOMER_ID','Имя':'FIRST_NAME','Фамилия':'LAST_NAME','E-Mail':'EMAIL',
+             'Личный телефон':'PHONE','Личный мобильный':'MOBILE','Город проживания':'CITY',
+             'Компания':'COMPANY','Дата регистрации':'REGISTERED_AT'}
+    required=set(mapping.values())|{'ORDERS_TOTAL','ORDERS_PAID','ORDERS_CANCELLED','COMPANY_ORDERS','GROUP_NAMES'}
+    if not required.issubset(reader.fieldnames or []):raise ValueError('Неполная выгрузка клиентов.')
+    rows=list(reader)
+    if not rows or len(rows)>100000:raise ValueError('Неверный размер выгрузки клиентов.')
+    table='<table><tr>'+''.join('<th>'+escape(k)+'</th>' for k in mapping)+'</tr>'
+    for row in rows:
+        if None in row or any(row.get(k) is None for k in required):raise ValueError('Повреждённая строка CSV.')
+        table+='<tr>'+''.join('<td>'+escape(row[v])+'</td>' for v in mapping.values())+'</tr>'
+    return prepare_users(table+'</table>',text)
+
+
+def parse_subscribers_csv(text):
+    reader=csv.DictReader(io.StringIO(text))
+    required={'SUBSCRIBER_ID','CUSTOMER_ID','EMAIL','ACTIVE','CONFIRMED','DATE_INSERT','DATE_UPDATE','DATE_CONFIRM','RUBRIC_IDS'}
+    if not required.issubset(reader.fieldnames or []):raise ValueError('Неполная выгрузка подписчиков.')
+    records=[];seen=set()
+    for row in reader:
+        identifier=row['SUBSCRIBER_ID'];customer=row['CUSTOMER_ID']
+        if not re.fullmatch(r'[1-9][0-9]*',identifier or '') or identifier in seen:raise ValueError('Неверный или повторный ID подписки.')
+        seen.add(identifier)
+        if customer not in {'','NULL','0'} and not re.fullmatch(r'[1-9][0-9]*',customer or ''):raise ValueError('Неверный ID аккаунта подписчика.')
+        if row['ACTIVE'] not in {'Y','N'} or row['CONFIRMED'] not in {'Y','N'}:raise ValueError('Неизвестный статус подписки.')
+        email=row['EMAIL'].strip().lower()
+        try:validate_email(email)
+        except ValidationError:raise ValueError('Некорректный email подписчика.')
+        rubrics=[r for r in row['RUBRIC_IDS'].split('|') if r]
+        if any(not re.fullmatch(r'[1-9][0-9]*',r) for r in rubrics):raise ValueError('Неверная рубрика.')
+        records.append({'id':identifier,'customer_id':customer if customer not in {'','NULL','0'} else '',
+                        'email':email,'active':row['ACTIVE']=='Y','confirmed':row['CONFIRMED']=='Y',
+                        'rubrics':sorted(set(rubrics),key=int),'created_at':row['DATE_INSERT'],
+                        'updated_at':row['DATE_UPDATE'],'confirmed_at':row['DATE_CONFIRM']})
+    if len(records)>100000:raise ValueError('Слишком много подписок.')
     return records
 
 

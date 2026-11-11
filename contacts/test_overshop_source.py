@@ -2,11 +2,32 @@ import csv
 import io
 from html import escape
 from django.test import SimpleTestCase
-from .overshop_source import prepare_users, parse_buyers
+from .overshop_source import prepare_users, parse_buyers,prepare_user_csv,parse_subscribers_csv
 
 
 def html_table(headers, rows):
     return '<table>'+''.join('<tr>'+''.join('<td>'+escape(str(v))+'</td>' for v in row)+'</tr>' for row in [headers, *rows])+'</table>'
+
+
+class AuthorisedCsvTests(SimpleTestCase):
+    def test_customer_csv_preserves_quoted_names_and_source_identity(self):
+        stream=io.StringIO();writer=csv.writer(stream)
+        writer.writerow(['CUSTOMER_ID','FIRST_NAME','LAST_NAME','EMAIL','PHONE','MOBILE','CITY','COMPANY','REGISTERED_AT','ORDERS_TOTAL','ORDERS_PAID','ORDERS_CANCELLED','COMPANY_ORDERS','GROUP_NAMES'])
+        writer.writerow(['7','A <B>, C','','a@example.com','','','','','2023-01-01',1,0,0,0,''])
+        row=prepare_user_csv(stream.getvalue())[0]
+        self.assertEqual(row['name'],'A <B>, C')
+        self.assertEqual(row['identity_key'],'overshop:user:7')
+        self.assertEqual(row['purchase_segment'],'unpaid')
+
+    def test_subscription_flags_dates_and_empty_user_are_not_inferred(self):
+        text='SUBSCRIBER_ID,CUSTOMER_ID,EMAIL,ACTIVE,CONFIRMED,DATE_INSERT,DATE_UPDATE,DATE_CONFIRM,RUBRIC_IDS\n5,,a@example.com,Y,N,2023-01-01,2026-11-11,,1|2\n'
+        row=parse_subscribers_csv(text)[0]
+        self.assertEqual(row['customer_id'],'')
+        self.assertFalse(row['confirmed'])
+        self.assertEqual(row['confirmed_at'],'')
+        self.assertEqual(row['rubrics'],['1','2'])
+        with self.assertRaisesMessage(ValueError,'Неизвестный статус'):
+            parse_subscribers_csv(text.replace(',Y,N,',',Y,unknown,'))
 
 
 class FullUserExportTests(SimpleTestCase):

@@ -43,6 +43,22 @@ class SavedSegment(models.Model):
     updated_at=models.DateTimeField(auto_now=True)
 
 
+class OverShopSubscription(models.Model):
+    subscriber_id=models.CharField(max_length=30,unique=True)
+    source_customer_id=models.CharField(max_length=30,blank=True)
+    address=models.ForeignKey(Address,on_delete=models.PROTECT)
+    client=models.ForeignKey(Client,on_delete=models.PROTECT,null=True,blank=True)
+    active=models.BooleanField(default=False)
+    confirmed=models.BooleanField(default=False)
+    rubrics=models.JSONField(default=list)
+    source_created_at=models.CharField(max_length=40,blank=True)
+    source_updated_at=models.CharField(max_length=40,blank=True)
+    source_confirmed_at=models.CharField(max_length=40,blank=True)
+    source_hash=models.CharField(max_length=64)
+    review_reason=models.CharField(max_length=200,blank=True)
+    observed_at=models.DateTimeField(auto_now=True)
+
+
 class EmailCheckState(models.Model):
     enabled=models.BooleanField(default=False)
     heartbeat_at=models.DateTimeField(null=True)
@@ -200,3 +216,43 @@ class DfoCollection(models.Model):
     completed_at=models.DateTimeField(null=True)
     lease=models.CharField(max_length=64,blank=True)
     lease_until=models.DateTimeField(null=True)
+
+
+class KaspiCollection(models.Model):
+    id=models.PositiveSmallIntegerField(primary_key=True,default=1)
+    enabled=models.BooleanField(default=False)
+    city_code=models.CharField(max_length=20,default='750000000')
+    cycle=models.PositiveIntegerField(default=1)
+    next_request_at=models.DateTimeField(null=True)
+    completed_at=models.DateTimeField(null=True)
+    heartbeat_at=models.DateTimeField(null=True)
+    lease=models.CharField(max_length=64,blank=True)
+    lease_until=models.DateTimeField(null=True)
+    error=models.CharField(max_length=300,blank=True)
+    report=models.JSONField(default=dict)
+
+
+class KaspiMerchant(models.Model):
+    merchant_id=models.CharField(max_length=80,unique=True)
+    name=models.CharField(max_length=300)
+    city=models.CharField(max_length=160,blank=True)
+    addresses=models.JSONField(default=list)
+    phones=models.JSONField(default=list)
+    category_codes=models.JSONField(default=list)
+    source_urls=models.JSONField(default=list)
+    client=models.ForeignKey(Client,on_delete=models.PROTECT,null=True)
+    checked_at=models.DateTimeField(null=True)
+
+
+class KaspiTask(models.Model):
+    cycle=models.PositiveIntegerField(default=1)
+    kind=models.CharField(max_length=16)
+    key=models.CharField(max_length=200)
+    priority=models.PositiveSmallIntegerField(default=20)
+    payload=models.JSONField(default=dict)
+    state=models.CharField(max_length=16,default='queued',db_index=True)
+    attempts=models.PositiveSmallIntegerField(default=0)
+    next_at=models.DateTimeField(default=timezone.now)
+    error=models.CharField(max_length=300,blank=True)
+    class Meta:
+        constraints=[models.UniqueConstraint(fields=['cycle','kind','key'],name='kaspi_unique_task')]

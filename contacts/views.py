@@ -36,7 +36,7 @@ def body(request):
 def static_file(request, filename='index.html'):
     if filename == 'sample.csv':
         return FileResponse((settings.BASE_DIR / 'fixtures' / 'contacts.example.csv').open('rb'), as_attachment=True, filename='contacts.example.csv')
-    if filename not in {'index.html','app.js','details.js','database.js','navigation.js','phones-ui.js','tags.js','profile-ui.js','collection.js','eondiris.js','source-layout.js','gov.js','dfo.js','overshop.js','goszakup.css','match.css','details.css','icons.svg','favicon.svg'}:
+    if filename not in {'index.html','app.js','details.js','database.js','navigation.js','phones-ui.js','tags.js','profile-ui.js','collection.js','eondiris.js','source-layout.js','gov.js','dfo.js','overshop.js','kaspi.js','goszakup.css','match.css','details.css','icons.svg','favicon.svg'}:
         raise Http404
     path = settings.BASE_DIR / 'prototype' / 'dist' / filename
     return FileResponse(path.open('rb'))

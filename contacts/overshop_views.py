@@ -3,6 +3,30 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
 from .overshop_source import CATEGORY_LABELS, PURCHASE_LABELS
+from .models import OverShopSubscription,Client,ImportBatch
+from .overshop_sync import subscription_state
+
+@require_GET
+def subscribers(request):
+    state=request.GET.get('state','');query=request.GET.get('q','').strip()[:100]
+    if state not in {'','confirmed','pending','inactive','suppressed','review'}:
+        return JsonResponse({'error':'Неизвестный статус подписки.'},status=400)
+    try:page=max(1,int(request.GET.get('page','1')))
+    except ValueError:return JsonResponse({'error':'Неверная страница.'},status=400)
+    rows=OverShopSubscription.objects.select_related('address','client').order_by('id')
+    if query:rows=rows.filter(address__email__icontains=query)
+    selected=[(r,subscription_state(r)) for r in rows]
+    counts={key:sum(s==key for r,s in selected) for key in ['confirmed','pending','inactive','suppressed','review']}
+    if state:selected=[(r,s) for r,s in selected if s==state]
+    total=len(selected);pages=max(1,(total+19)//20);page=min(page,pages)
+    batch=ImportBatch.objects.filter(result__kind='overshop_full').order_by('-committed_at').first()
+    return JsonResponse({'total':total,'page':page,'pages':pages,'states':counts,
+        'import_report':batch.result if batch else None,
+        'accounts_imported':Client.objects.filter(identity_key__startswith='overshop:user:').count(),
+        'rows':[{'subscriber_id':r.subscriber_id,'source_customer_id':r.source_customer_id,
+                 'email':r.address.email,'active':r.active,'confirmed':r.confirmed,'rubrics':r.rubrics,
+                 'created_at':r.source_created_at,'confirmed_at':r.source_confirmed_at,
+                 'state':s,'review_reason':r.review_reason} for r,s in selected[(page-1)*20:page*20]]})
 
 @require_GET
 def preview(request):
@@ -30,7 +54,10 @@ def preview(request):
             total=len(rows);pages=max(1,(total+19)//20);page=min(page,pages)
             pilot_path=settings.BASE_DIR/'data/overshop/pilot-result.json'
             pilot=json.loads(pilot_path.read_text(encoding='utf-8')) if pilot_path.exists() else {}
-            return JsonResponse({'available':True,'full_review':True,'connected':False,'imported':bool(pilot),'full_imported':False,
+            result_path=settings.BASE_DIR/'data/overshop/full-import-result.json'
+            result=json.loads(result_path.read_text(encoding='utf-8')) if result_path.exists() else {}
+            return JsonResponse({'available':True,'full_review':True,'connected':False,'imported':bool(pilot or result),'full_imported':bool(result),
+                'import_result':result,
                 'pilot':{key:pilot[key] for key in ['created','updated','verified','audience_id','source_ids'] if key in pilot},
                 'summary':report['summary'],'categories':CATEGORY_LABELS,'purchases':PURCHASE_LABELS,
                 'total':total,'page':page,'pages':pages,'preview':rows[(page-1)*20:page*20]})
