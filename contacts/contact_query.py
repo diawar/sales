@@ -110,7 +110,18 @@ def filtered_contacts(params):
         if '@' in domain or len(domain)>253:
             raise ValueError('Укажите почтовый домен, например mail.ru.')
         rows=rows.filter(address__email__iendswith='@'+domain)
-    excluded = Q(address__archived=True) | (Q(address__isnull=False) & ~Q(address__suppression_reason=''))
+    from .email_policy import blocked_query, eligible_addresses
+    from .models import Address
+    excluded = Q(address__isnull=False) & blocked_query('address__')
+    send_status = params.get('send_status', '')
+    if send_status == 'ready':
+        rows = rows.filter(address_id__in=eligible_addresses(Address.objects.all()).values('pk'))
+    elif send_status == 'excluded':
+        rows = rows.filter(excluded)
+    elif send_status == 'pending':
+        rows = rows.exclude(excluded).exclude(address_id__in=eligible_addresses(Address.objects.all()).values('pk'))
+    elif send_status:
+        raise ValueError('Некорректный фильтр отправки.')
     activity = params.get('activity')
     if activity == 'Исключены':
         rows = rows.filter(excluded)

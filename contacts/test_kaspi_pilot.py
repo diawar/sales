@@ -1,3 +1,4 @@
+from django.test import override_settings as _legacy_auth
 from django.test import TestCase,SimpleTestCase
 from .kaspi_pilot import import_samples,parse_samples
 from .kaspi_sample import parse_seller_html
@@ -10,6 +11,7 @@ def sample(identifier='123',category='Процессоры'):
         'categories':['Компьютеры',category],'discovery_url':'https://kaspi.kz/shop/p/test-123/'}
 
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class KaspiParsingTests(SimpleTestCase):
     def test_named_id_and_address_city_are_preserved(self):
         row=sample('Pulser');parsed=parse_seller_html(row['html'],row['source_url'])
@@ -29,6 +31,7 @@ class KaspiParsingTests(SimpleTestCase):
         with self.assertRaises(ValueError):parse_samples([row])
 
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class KaspiImportTests(TestCase):
     def test_repeated_merchant_combines_categories_without_duplicates(self):
         rows=[sample(),sample(category='Системные блоки')]

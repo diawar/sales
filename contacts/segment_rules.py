@@ -1,6 +1,6 @@
 import json
 
-FIELDS={'query','audience','activity','validation','source','delivered','clicks','archive','phone_kind','phone','city','profile_type','profile_tag','completeness','email_domain'}
+FIELDS={'send_status','query','audience','activity','validation','source','delivered','clicks','archive','phone_kind','phone','city','profile_type','profile_tag','completeness','email_domain'}
 
 
 def validate_rules(criteria, nested=False):

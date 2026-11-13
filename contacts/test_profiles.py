@@ -1,3 +1,4 @@
+from django.test import override_settings as _legacy_auth
 import io
 import json
 from django.test import TestCase
@@ -5,6 +6,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from .models import Audience,Client,Contact,Address,ClientFact
 from .profiles import apply_profile
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class ProfilesTests(TestCase):
     def setUp(self):self.audience=Audience.objects.get(name='Бизнес',parent=None)
     def post(self,url,value):return self.client.post(url,data=json.dumps(value),content_type='application/json')

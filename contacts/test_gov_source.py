@@ -1,8 +1,10 @@
+from django.test import override_settings as _legacy_auth
 from django.test import SimpleTestCase
 from .gov_source import parse_card,canonical_url,parse_phones,read_card
 import httpx
 from .goszakup_client import SourceError
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class GovParserTests(SimpleTestCase):
     def card(self,rows):return '<h1>Госорган</h1><div class="contacts-detail"><table>'+rows+'</table></div>'
     def test_scoped_contacts_and_purpose(self):
@@ -39,6 +41,7 @@ class GovParserTests(SimpleTestCase):
                 calls.append(str(request.url));return httpx.Response(status,headers={'Retry-After':'600','Location':'https://example.com'})
             with self.assertRaises(SourceError) as caught:read_card('https://www.gov.kz/org/test',httpx.MockTransport(handler))
             self.assertEqual(len(calls),1);self.assertEqual(caught.exception.retry_after,600)
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class GovParagraphTests(SimpleTestCase):
     def test_empty_contact_card_has_explicit_reason(self):
         html='<h1>Маслихат</h1><div class="ministry-contacts-page"><div class="ministry-contacts-card">Социальные сети</div></div>'

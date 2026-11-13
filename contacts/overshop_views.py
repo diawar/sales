@@ -30,7 +30,7 @@ def subscribers(request):
 
 @require_GET
 def preview(request):
-    full_path=settings.BASE_DIR/'data/overshop/full-review.json'
+    full_path=settings.DATA_DIR/'overshop/full-review.json'
     if full_path.exists():
         try:
             report=json.loads(full_path.read_text(encoding='utf-8'))
@@ -52,9 +52,9 @@ def preview(request):
             field,reverse=sorts[sort]
             rows.sort(key=lambda r:int(r[field]) if field in {'source_customer_id','orders_total'} else r[field].casefold(),reverse=reverse)
             total=len(rows);pages=max(1,(total+19)//20);page=min(page,pages)
-            pilot_path=settings.BASE_DIR/'data/overshop/pilot-result.json'
+            pilot_path=settings.DATA_DIR/'overshop/pilot-result.json'
             pilot=json.loads(pilot_path.read_text(encoding='utf-8')) if pilot_path.exists() else {}
-            result_path=settings.BASE_DIR/'data/overshop/full-import-result.json'
+            result_path=settings.DATA_DIR/'overshop/full-import-result.json'
             result=json.loads(result_path.read_text(encoding='utf-8')) if result_path.exists() else {}
             return JsonResponse({'available':True,'full_review':True,'connected':False,'imported':bool(pilot or result),'full_imported':bool(result),
                 'import_result':result,
@@ -63,7 +63,7 @@ def preview(request):
                 'total':total,'page':page,'pages':pages,'preview':rows[(page-1)*20:page*20]})
         except (ValueError,KeyError,OSError,TypeError):
             return JsonResponse({'error':'Не удалось прочитать проверку Over-shop.kz.'},status=503)
-    path=settings.BASE_DIR/'data/overshop/buyers-preview.json'
+    path=settings.DATA_DIR/'overshop/buyers-preview.json'
     if not path.exists():return JsonResponse({'available':False,'connected':False})
     try:
         report=json.loads(path.read_text(encoding='utf-8'))

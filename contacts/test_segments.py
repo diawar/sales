@@ -1,7 +1,9 @@
+from django.test import override_settings as _legacy_auth
 from django.test import TestCase
 from .models import Client,Contact,Address
 
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class SegmentTests(TestCase):
     def post(self,**payload):return self.client.post('/api/segments',payload,content_type='application/json')
 

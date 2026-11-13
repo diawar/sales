@@ -28,13 +28,13 @@ class Command(BaseCommand):
                 self.stdout.write(json.dumps({'accounts':len(customers),'subscriptions':len(subscribers),'committed':False}))
                 return
             if connection.vendor=='sqlite':
-                folder=settings.BASE_DIR/'data/backups';folder.mkdir(parents=True,exist_ok=True)
+                folder=settings.DATA_DIR/'backups';folder.mkdir(parents=True,exist_ok=True)
                 backup=folder/('before-overshop-'+uuid.uuid4().hex+'.sqlite3')
                 with sqlite3.connect(str(connection.settings_dict['NAME'])) as source,sqlite3.connect(str(backup)) as target:
                     source.backup(target)
                     if target.execute('PRAGMA integrity_check').fetchone()[0]!='ok':raise ValueError('Ошибка резервной копии.')
             result=import_snapshot(customers,subscribers,digest)
-            folder=settings.BASE_DIR/'data/overshop';folder.mkdir(parents=True,exist_ok=True)
+            folder=settings.DATA_DIR/'overshop';folder.mkdir(parents=True,exist_ok=True)
             (folder/'full-import-result.json').write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding='utf-8')
             from collections import Counter
             summary={'records':len(customers),'categories':dict(Counter(r['category'] for r in customers)),

@@ -1,3 +1,4 @@
+from django.test import override_settings as _legacy_auth
 import json
 from datetime import timedelta
 from email.utils import format_datetime
@@ -8,6 +9,7 @@ from .kaspi_client import KaspiClient,KaspiBlocked,KaspiRetry,KaspiFormat
 from .kaspi_collection import control,run_round
 from .models import KaspiCollection,KaspiTask,KaspiMerchant,Client,Phone
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class PublicClientTests(SimpleTestCase):
     def test_retry_after_http_date_is_not_retried_early(self):
         retry=format_datetime(timezone.now()+timedelta(hours=2),usegmt=True)
@@ -55,6 +57,7 @@ class Reader:
     def details(self,*args):self.calls+=1;return {'merchant_id':'Pulser','shop_name':'Shop','addresses':['Казахстан, г.Шымкент, адрес']}
     def support(self,*args):self.calls+=1;return [{'number':'+77473606088','raw':'+7 (747) 360-60-88','kind':'mobile'}]
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class AutomaticCollectionTests(TestCase):
     def setUp(self):
         control('start')

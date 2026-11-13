@@ -1,3 +1,4 @@
+from django.test import override_settings as _legacy_auth
 from datetime import timedelta
 from unittest.mock import Mock,MagicMock,patch
 from django.test import TestCase,SimpleTestCase
@@ -11,6 +12,7 @@ from .goszakup_source import parse_registry_card,parse_protocol_html,LeadPortal,
 def card(identifier='123456789012'):
     return f'<table><tr><td>БИН участника</td><td>{identifier}</td></tr><tr><td>Наименование на рус. языке</td><td>Alpha</td></tr><tr><td>E-mail</td><td>a@example.com</td></tr><tr><td>Телефон</td><td>+7 701 123 45 67; +7 7172 12 34 56</td></tr></table>'
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class SourceTests(SimpleTestCase):
     def test_identity_match_and_phones(self):
         value=parse_registry_card(card(),'123456789012')
@@ -42,6 +44,7 @@ class SourceTests(SimpleTestCase):
             with self.assertRaises(SourceError):api.search()
             with self.assertRaises(SourceError):api.get_json('https://example.com/api/core/api/public/organizations/')
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class CollectorTests(TestCase):
     def setUp(self):
         configure('start');self.token=claim()

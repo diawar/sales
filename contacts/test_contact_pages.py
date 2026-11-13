@@ -1,7 +1,9 @@
+from django.test import override_settings as _legacy_auth
 from django.test import TestCase
 from .models import Address, Audience, Client, Contact, Evidence, Phone
 
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class ContactPageTests(TestCase):
     @classmethod
     def setUpTestData(cls):

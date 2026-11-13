@@ -1,0 +1,39 @@
+[Unit]
+Description=OVER Sales web application (no-send stage)
+After=network.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=sales
+Group=sales
+WorkingDirectory=/opt/over-sales/current
+EnvironmentFile=/etc/over-sales/sales.env
+Environment=DJANGO_SETTINGS_MODULE=mailer.production
+Environment=SALES_DATA_DIR=/var/lib/over-sales
+Environment=SALES_SMTP_ENABLED=0
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStartPre=/opt/over-sales/current/.venv/bin/python manage.py check --deploy --fail-level ERROR
+ExecStartPre=/opt/over-sales/current/.venv/bin/python manage.py migrate --check
+ExecStart=/opt/over-sales/current/.venv/bin/gunicorn --config /opt/over-sales/current/deploy/gunicorn.conf.py mailer.wsgi:application
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=120
+TimeoutStopSec=45
+KillMode=control-group
+KillSignal=SIGTERM
+StateDirectory=over-sales
+StateDirectoryMode=0700
+RuntimeDirectory=over-sales
+RuntimeDirectoryMode=0750
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/over-sales /run/over-sales
+
+[Install]
+WantedBy=multi-user.target

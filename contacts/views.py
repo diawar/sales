@@ -16,6 +16,7 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods, require_POST
 from .models import Audience, Client, Address, Contact, Evidence, ImportBatch, Phone
 from .import_files import read_table
+from .email_policy import sending_state, blocked_query
 from .phones import parse_phone
 from .profiles import serialize,apply_profile
 from .profile_import import ALIASES,parse_extra,identity
@@ -36,10 +37,13 @@ def body(request):
 def static_file(request, filename='index.html'):
     if filename == 'sample.csv':
         return FileResponse((settings.BASE_DIR / 'fixtures' / 'contacts.example.csv').open('rb'), as_attachment=True, filename='contacts.example.csv')
-    if filename not in {'index.html','app.js','details.js','database.js','navigation.js','phones-ui.js','tags.js','profile-ui.js','collection.js','eondiris.js','source-layout.js','gov.js','dfo.js','overshop.js','kaspi.js','goszakup.css','match.css','details.css','icons.svg','favicon.svg'}:
+    if filename not in {'index.html','app.js','details.js','database.js','navigation.js','phones-ui.js','tags.js','profile-ui.js','collection.js','eondiris.js','source-layout.js','gov.js','dfo.js','overshop.js','kaspi.js','templates.js','template-builder.js','template-tools.js','template-mail.js','email-policy.js','campaigns.js','campaign-approval.js','campaign-queue.js','campaign-statistics.js','campaign-readiness.js','subscriptions.js','subscription-form.js','activity-audiences.js','servercore.js','campaign-mail-check.js','automations.js','rehearsals.js','frequency.js','action-journal.js','auth.css','auth-session.js','notifications.js','goszakup.css','match.css','details.css','icons.svg','favicon.svg','favicon.png','favicon.ico'}:
         raise Http404
     path = settings.BASE_DIR / 'prototype' / 'dist' / filename
-    return FileResponse(path.open('rb'))
+    response = FileResponse(path.open('rb'))
+    if filename.startswith('favicon.'):
+        response['Cache-Control'] = 'no-cache'
+    return response
 
 @ensure_csrf_cookie
 def contacts(request):
@@ -80,9 +84,10 @@ def contact_records(queryset):
         audiences = sorted(audience_lookup[pk] for pk in audience_ids)
         evidence = list(contact.evidence.all())
         address=contact.address
-        excluded=bool(address and (address.archived or address.suppression_reason))
+        excluded=sending_state(address)['code'] in {'excluded','invalid'}
         row={'id':contact.id,'name':contact.client.name,'identifier':contact.client.identifier,'email':address.email if address else '', 'audience':audiences[0] if audiences else '', 'audiences':audiences,'source':evidence[0].source if evidence else '', 'sources':sorted({e.source for e in evidence}), 'evidence':[{'source':e.source,'url':e.source_url,'current':e.current,'last_seen':e.last_seen} for e in evidence], 'validation':address.validation if address else 'Без email','archived':address.archived if address else False,'activity':'Исключены' if excluded else 'Мало данных','delivered':0,'opens':0,'clicks':0,'notes':contact.client.notes,'publication':'Опубликован' if any(e.current for e in evidence) else 'Исторический контакт'}
         row['audience_ids']=sorted(audience_ids)
+        row['sending']=sending_state(address)
         row['validation_checked_at']=address.validation_checked_at if address else None
         row['validation_result']=address.validation_result if address else {}
         row['phones']=[{'number':p.raw if p.kind=='unknown' else p.number,'kind':p.kind,'source':p.source,'url':p.source_url} for p in contact.client.phones.all()]
@@ -98,16 +103,16 @@ def contacts_summary(request):
         with_email=Count('id',filter=Q(has_email=True)),
         with_phone=Count('id',filter=Q(has_phone=True)),
         missing_both=Count('id',filter=Q(has_email=False,has_phone=False)))
-    excluded=Q(address__archived=True)|(Q(address__isnull=False)&~Q(address__suppression_reason=''))
+    excluded=Q(address__isnull=False)&blocked_query('address__')
     aggregate=Contact.objects.aggregate(total=Count('id'),working=Count('id',filter=~Q(address__archived=True)),
         attention=Count('id',filter=Q(address__validation__in=['Не проверен','Временная ошибка'])))
     memberships={}
     parents=dict(Audience.objects.values_list('id','parent_id'))
     # Count each contact once in its root even if it belongs to several children.
-    for row in Contact.objects.values('id','address__archived','address__suppression_reason','audiences__id').iterator(chunk_size=1000):
+    for row in Contact.objects.values('id','address__archived','address__suppression_reason','address__validation_result','audiences__id').iterator(chunk_size=1000):
         aid=row['audiences__id']
         if aid is None:continue
-        blocked=bool(row['address__archived'] or row['address__suppression_reason'])
+        blocked=bool(row['address__archived'] or row['address__suppression_reason'] or row['address__validation_result'] and row['address__validation_result'].get('code') in ('syntax','null_mx','nxdomain','no_route'))
         for target in {aid,parents.get(aid)}-{None}:
             members=memberships.setdefault(target,{})
             members[row['id']]=(bool(row['address__archived']),blocked)
@@ -130,12 +135,12 @@ def contacts_export(request):
         return "'"+text if text.lstrip().startswith(('=','+','-','@')) else text
     def stream():
         yield '\ufeff'
-        yield writer.writerow(['Компания','Email','Аудитория','Активность','Проверка','Доставлено','Открытия','Переходы','Источник','Телефоны','БИН','Город','Отрасль','Тип организации','Сайт','Соцсети','Теги'])
+        yield writer.writerow(['Компания','Email','Аудитория','Активность','Проверка','Доставлено','Открытия','Переходы','Источник','Телефоны','БИН','Город','Отрасль','Тип организации','Сайт','Соцсети','Теги','Допуск к отправке','Причина ограничения','Проверено email'])
         for row in contact_records(rows):
             values=[row['name'],row['email'],', '.join(row['audiences']),row['activity'],row['validation'],0,0,0,row['source'],
                 ' | '.join(p['number'] for p in row['phones']),row['identifier'],row['city'],row['industry'],row['organization_type'],
                 ' | '.join(row['websites']),' | '.join(s['service']+'='+s['value'] for s in row['socials']),
-                ' '.join('#'+t for t in row['tags'])]
+                ' '.join('#'+t for t in row['tags']),row['sending']['label'],row['sending']['reason'],row['validation_checked_at'] or '']
             yield writer.writerow([safe(v) for v in values])
     response=StreamingHttpResponse(stream(),content_type='text/csv; charset=utf-8')
     response['Content-Disposition']='attachment; filename="contacts.csv"'

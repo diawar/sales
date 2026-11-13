@@ -1,9 +1,11 @@
+from django.test import override_settings as _legacy_auth
 import io
 import json
 from django.test import TestCase, Client as HttpClient
 from django.core.files.uploadedfile import SimpleUploadedFile
 from .models import Audience, Contact, Address, Evidence, Client
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class ImportTests(TestCase):
     def setUp(self):
         self.audience=Audience.objects.get(name='Бизнес')

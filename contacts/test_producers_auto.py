@@ -1,3 +1,4 @@
+from django.test import override_settings as _legacy_auth
 from datetime import timedelta
 from unittest.mock import Mock,patch
 from django.test import TestCase
@@ -7,6 +8,7 @@ from .models import ProducerPilot,Client,Address,Contact,Audience,ClientFact,Col
 from .producers import control,run_round
 from .goszakup_client import SourceError
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class AutomaticProducerTests(TestCase):
     def setUp(self):control('start')
     def step(self,rows,more=False,number=1):

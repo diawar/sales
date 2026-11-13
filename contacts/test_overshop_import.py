@@ -1,8 +1,10 @@
+from django.test import override_settings as _legacy_auth
 from django.test import TestCase
 from .overshop_import import import_pilot
 from .models import Client, Contact, Address, ImportBatch
 
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class OverShopPilotTests(TestCase):
     def row(self,identifier='42'):
         return {'source_customer_id':identifier,'identity_key':'overshop:user:'+identifier,

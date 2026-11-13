@@ -1,3 +1,4 @@
+from django.test import override_settings as _legacy_auth
 from django.test import TestCase
 from .overshop_sync import import_snapshot,subscription_state
 from .models import Client,Contact,Address,Audience,OverShopSubscription,ImportBatch
@@ -15,6 +16,7 @@ def subscriber(identifier='1',email='client@example.com',customer_id='42',confir
             'rubrics':['1'],'created_at':'2023-01-01','updated_at':'2026-11-11','confirmed_at':'2023-01-02' if confirmed else ''}
 
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class OverShopFullImportTests(TestCase):
     def test_all_ids_remain_separate_and_repeat_is_idempotent(self):
         rows=[customer(),customer('43')]

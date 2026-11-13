@@ -1,3 +1,4 @@
+from django.test import override_settings as _legacy_auth
 import json
 from email.utils import format_datetime
 from datetime import timedelta
@@ -16,6 +17,7 @@ def row(identifier='123456789012',name='Alpha',**extra):
 def page(rows,next_page=False,number=1):
     return {'success':True,'data':rows,'meta':{'page':number,'limit':20,'total':100,'totalOrganizations':20,'hasNextPage':next_page}}
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class ProducerSourceTests(SimpleTestCase):
     def test_public_endpoint_and_bounded_page(self):
         def respond(request):

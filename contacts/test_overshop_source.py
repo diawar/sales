@@ -1,3 +1,4 @@
+from django.test import override_settings as _legacy_auth
 import csv
 import io
 from html import escape
@@ -9,6 +10,7 @@ def html_table(headers, rows):
     return '<table>'+''.join('<tr>'+''.join('<td>'+escape(str(v))+'</td>' for v in row)+'</tr>' for row in [headers, *rows])+'</table>'
 
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class AuthorisedCsvTests(SimpleTestCase):
     def test_customer_csv_preserves_quoted_names_and_source_identity(self):
         stream=io.StringIO();writer=csv.writer(stream)
@@ -30,6 +32,7 @@ class AuthorisedCsvTests(SimpleTestCase):
             parse_subscribers_csv(text.replace(',Y,N,',',Y,unknown,'))
 
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class FullUserExportTests(SimpleTestCase):
     def exports(self):
         headers=['ID','Имя','Фамилия','E-Mail','Личный телефон','Личный мобильный','Город проживания','Компания','Дата регистрации']

@@ -1,6 +1,8 @@
+from django.test import override_settings as _legacy_auth
 from django.test import SimpleTestCase
 from .directory_sample import parse_vspravke
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class DirectorySampleTests(SimpleTestCase):
     def test_scoped_and_deduplicated_contacts(self):
         html='<div itemtype="http://schema.org/Organization"><h1 itemprop="name">Магазин</h1><span itemprop="telephone">+7(727)328-04-93</span><meta itemprop="telephone" content="+7(727)328-04-93"><span itemprop="url">https://example.kz</span><meta itemprop="url" content="https://kz.vspravke.com/almaty/company/1"><span itemprop="email">office@example.kz</span></div><span itemprop="telephone">+77011234567</span><span itemprop="email">other@example.kz</span>'

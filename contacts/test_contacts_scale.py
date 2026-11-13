@@ -1,8 +1,10 @@
+from django.test import override_settings as _legacy_auth
 from django.test import TestCase
 
 from .models import Address, Client, Contact, Evidence
 
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class ContactScaleTests(TestCase):
     def test_large_client_with_many_emails_and_null_address(self):
         # One client with >1000 addresses also exercises nested prefetch: simply

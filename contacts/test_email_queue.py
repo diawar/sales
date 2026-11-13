@@ -1,3 +1,4 @@
+from django.test import override_settings as _legacy_auth
 from datetime import timedelta
 from django.test import TestCase
 from django.utils import timezone
@@ -5,6 +6,7 @@ from .models import Address,EmailCheckState
 from .email_queue import run_round
 
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class EmailQueueTests(TestCase):
     def setUp(self):
         self.state=EmailCheckState.objects.create(pk=1,enabled=True)

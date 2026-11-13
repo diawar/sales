@@ -1,3 +1,4 @@
+from django.test import override_settings as _legacy_auth
 from datetime import timedelta
 from unittest.mock import Mock,patch
 import httpx
@@ -15,6 +16,7 @@ def html(bin='001240001234',name='Example',email='sales@example.kz,info@example.
     return '<p>Всего записей 1</p><ul class="pagination"><li class="active">'+str(page)+'</li></ul><table><thead><tr>'+''.join('<th>'+v+'</th>' for v in headers)+'</tr></thead><tbody><tr>'+''.join('<td>'+v+'</td>' for v in cells)+'</tr></tbody></table>'
 
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class DfoSourceTests(SimpleTestCase):
     def test_contacts_only_from_columns_and_leading_zero(self):
         payload=parse_page(html()+'<footer>support@portal.kz +7 777 555 66 77</footer>',1)
@@ -49,6 +51,7 @@ class DfoSourceTests(SimpleTestCase):
         self.assertEqual(len(read_page(1,transport)['rows']),1)
 
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class DfoCollectionTests(TestCase):
     def setUp(self):control('start')
     def payload(self,**kwargs):return parse_page(html(**kwargs),1)

@@ -1,3 +1,4 @@
+from django.test import override_settings as _legacy_auth
 from unittest.mock import Mock,patch
 from datetime import timedelta
 from django.test import TestCase
@@ -10,6 +11,7 @@ from .goszakup_client import SourceError
 def row(slug='one',email='public@example.kz'):
     return parse_card(f'<h1>Госорган</h1><div class="contacts-detail"><table><tr><td>Email</td><td>{email}</td></tr><tr><td>Канцелярия</td><td>+7 (7172) 71-74-67</td></tr></table></div>',f'https://www.gov.kz/org/{slug}')
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class GovCollectorTests(TestCase):
     def setUp(self):
         control('configure',['https://www.gov.kz/org/one']);control('start')

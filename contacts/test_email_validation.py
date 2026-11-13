@@ -1,3 +1,4 @@
+from django.test import override_settings as _legacy_auth
 from types import SimpleNamespace
 from unittest.mock import Mock
 import dns.resolver
@@ -5,6 +6,7 @@ from django.test import SimpleTestCase
 from .email_validation import check_email
 
 
+@_legacy_auth(SALES_AUTH_REQUIRED=False)
 class EmailValidationTests(SimpleTestCase):
     def test_syntax_does_not_query_dns(self):
         resolver=Mock()

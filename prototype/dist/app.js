@@ -5,7 +5,7 @@ let page=1,sortKey='name',sortDirection=1,selected=new Set();
 let pagination=window.INITIAL_PAGE.pagination;
 let pendingRequest=0,filterTimer=null,loading=false;
 let segmentGroups={};
-const filters=['query','audience','activity','validation','source','delivered','clicks','archive','phone_kind','phone','city','profile_type','profile_tag','completeness','email_domain'];
+const filters=['send_status','query','audience','activity','validation','source','delivered','clicks','archive','phone_kind','phone','city','profile_type','profile_tag','completeness','email_domain'];
 const kindName={mobile:'Сотовый',landline:'Городской',service:'Сервисный',unknown:'Не определён'};
 function filtered(){return data;}
 function badge(text,cls){const el=document.createElement('span');el.className=`badge ${cls}`;el.textContent=text;return el;}
@@ -28,6 +28,7 @@ function render(){
       if(k==='activity')td.append(badge(r[k],r[k]==='Исключены'?'red':''));
       else if(k==='validation')td.append(badge(r[k],r[k]==='Вероятно рабочий'?'green':r[k]==='Временная ошибка'?'orange':r[k]==='Несуществующий'?'red':''));
       else td.textContent=k==='audience'?r.audiences.join(', '):r[k];
+      if(k==='email'&&r.sending){const small=document.createElement('small');small.textContent=r.sending.label;small.title=r.sending.reason;td.append(small);}
       if(k==='name'){const small=document.createElement('small');small.textContent=`Контакт ${r.id}${r.archived?' · Архив':''}`;td.append(small);}tr.append(td);
       if(k==='validation'&&r.validation_checked_at){const small=document.createElement('small');small.textContent='Проверено: '+new Date(r.validation_checked_at).toLocaleString('ru-RU');td.append(small);td.title=r.validation_result?.reason||'';}
     }
